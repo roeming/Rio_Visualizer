@@ -766,7 +766,8 @@ def main():
         if last_hit_value["k"] == "Hit":
             force_hit = True
             
-    # def save():
+    def save():
+        pass
     #     global last_hits
 
     #     read_values
