@@ -473,6 +473,9 @@ class BattingCalculator:
 
         self.Hit_HorizontalAngle = BattingCalculator.AdjustBallAngle(iVar2)
 
+        if "override_horizontal_angle" in self.readValues:
+            self.Hit_HorizontalAngle = self.readValues["override_horizontal_angle"]
+
 
     def calculateVerticalAngle(self):
         iVar5 = 0
@@ -615,6 +618,9 @@ class BattingCalculator:
                                                     (higherRange - lowerRange)) * (higherRange - lowerRange))
 
         self.Hit_VerticalAngle = sVar3
+
+        if "override_vertical_angle" in self.readValues:
+            self.Hit_VerticalAngle = self.readValues["override_vertical_angle"]
 
         if (self.Hit_VerticalAngle < 0x401):
             if (self.Hit_VerticalAngle < -0x400):
@@ -1222,6 +1228,12 @@ def hit_ball(**kwargs) -> dict:
 
     if "override_vertical_range" in kwargs:
         newArgs["override_vertical_range"] = kwargs["override_vertical_range"]
+
+    if "override_vertical_angle" in kwargs:
+        newArgs["override_vertical_angle"] = kwargs["override_vertical_angle"]
+    
+    if "override_horizontal_angle" in kwargs:
+        newArgs["override_horizontal_angle"] = kwargs["override_horizontal_angle"]
 
     c = BattingCalculator()
 

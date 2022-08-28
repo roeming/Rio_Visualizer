@@ -1,4 +1,5 @@
 import configparser
+from copy import deepcopy
 import sys, pygame, _dolphin_memory_engine as dme
 from matplotlib.colors import to_rgb
 from calc_batting import get_bat_hitbox, get_name, hit_ball, get_hitbox
@@ -266,7 +267,7 @@ def missed_ball():
     ]
 
     global last_hits
-    last_hits.append({"k": "StrikeBall", "v": res, "t": text})
+    last_hits.append({"k": "StrikeBall", "v": res, "t": text, "read_values":deepcopy(read_values)})
 
 def ordinal(n):
     return "%d%s" % (n,"tsnrhtdd"[(n//10%10!=1)*(n%10<4)*n%10::4])
@@ -426,7 +427,7 @@ def calculate_trajectory():
         ]
 
     global last_hits
-    last_hits.append({"k": "Hit", "v": res, "t": text, "e": e})
+    last_hits.append({"k": "Hit", "v": res, "t": text, "e": e, "read_values":deepcopy(read_values)})
 
 
 def get_rect(a, b, c, d) -> Rect:
@@ -767,13 +768,12 @@ def main():
             force_hit = True
             
     def save():
+        global last_hits
+
+        r_data = [x["read_data"] for x in last_hits]
+
+    def load(filename):
         pass
-    #     global last_hits
-
-    #     read_values
-
-    # def load(filename):
-    #     pass
 
     while True:
 
@@ -796,8 +796,7 @@ def main():
                     toggle_force_bat_hit()
                 
                 elif event.key == pygame.K_s:
-                    save()
-                    
+                    save()                    
 
             # print(event)
         screen.fill(background)       
