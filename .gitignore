@@ -152,3 +152,4 @@ cython_debug/
 #.idea/
 
 !_dolphin_memory_engine.pyd
+game *.json

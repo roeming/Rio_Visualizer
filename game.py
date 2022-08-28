@@ -1,6 +1,7 @@
 import configparser
 from copy import deepcopy
-import sys, pygame, _dolphin_memory_engine as dme
+from genericpath import exists
+import sys, pygame, _dolphin_memory_engine as dme, json
 from matplotlib.colors import to_rgb
 from calc_batting import get_bat_hitbox, get_name, hit_ball, get_hitbox
 from pygame import Rect, Vector2, Vector3
@@ -344,10 +345,10 @@ def calculate_trajectory():
         num_stars=read_values["num_stars"],
         is_starred=is_starred,
     )
-    
+
     e = []
 
-    if "Vertical Details" in res and len(res["Vertical Details"]["Zones"]) > 1:
+    if "Vertical Details" in res and len(res["Vertical Details"]["Zones"]) > 1 and (get_config_value("VISUAL_TOGGLES", "display_multiple_trajectories_vertical", bool) or get_config_value("VISUAL_TOGGLES", "display_multiple_trajectories_horizontal", bool)):
         for i in range(5):
             if i != res["Vertical Details"]["Selected Zone"]:
                 new_res = hit_ball(
@@ -451,7 +452,7 @@ def draw_detailed_text(x, y, width, height):
     data = last_hit_value["t"]
     
     if force_hit:
-        data = ["FORCING" for x in range(5)]
+        data = ["FORCING"] + data
 
     my_square = get_inscribed_square_rect(x, y, width, height)
     m_surface = get_my_surface(x,y, width, height)
@@ -770,10 +771,44 @@ def main():
     def save():
         global last_hits
 
-        r_data = [x["read_data"] for x in last_hits]
+        r_data = [x["read_values"] for x in last_hits]
+
+        file_string = "game {0}.json"
+
+        file_numbered_string = "game {0} ({1}).json"
+
+        file_name = file_string.format(read_values['game_id'])
+
+        if exists(file_name):
+            i = 1
+            
+            file_name = file_numbered_string.format(read_values['game_id'], i)
+
+            while exists(file_name):
+                i+=1
+                file_name = file_numbered_string.format(read_values['game_id'], i)
+        
+        with open(file_name, "w") as f:
+            json.dump(r_data, f, indent=2)
 
     def load(filename):
-        pass
+        global read_values
+        if not exists(filename):
+            return
+        
+        with open(filename, "r") as f:
+            j = json.load(f)
+        
+        for jj in j:
+            read_values = jj
+
+            if read_values["hit_by_pitch"] or read_values["missed_ball"]:
+                missed_ball()
+            elif read_values["was_contact_made"]:
+                calculate_trajectory()        
+
+    if len(sys.argv) > 1:
+        load(sys.argv[1])
 
     while True:
 
