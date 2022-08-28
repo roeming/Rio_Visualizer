@@ -1,0 +1,11 @@
+Use left and right to cycle through old hits and misses
+Use space to reset to live
+
+while viewing old hits, new hits will be recorded
+
+you can press S to save the current game, it will store barebones data into a json labled "game X.json" where X is the game id set by rio.
+
+if you want to load any data, drag the "game X.json" file onto the exe, it will launch with that data as previous data.
+
+if allow_forced_rehits is enabled in the config, you can press F to force all hits to mimic that hit.
+press F again or Space to exit forced rehits
