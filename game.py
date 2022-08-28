@@ -7,7 +7,7 @@ from calc_batting import get_bat_hitbox, get_name, hit_ball, get_hitbox
 from pygame import Rect, Vector2, Vector3
 
 
-def get_config_value(section:str, v:str, type:None):
+def get_config_value(section:str, v:str, type=None):
     if section in config.sections():
         if v in config[section]:
             if type == bool:
@@ -97,12 +97,16 @@ def get_game_state():
             runners_ord.append(ordinal(3))
         runners_text += ", ".join(runners_ord) + "\n"
 
+
+
     return (
-          optional_text(f"{'Top of the' if read_values['inning_half'] == 0 else 'Bottom of the'} {ordinal(read_values['inning'])}\n", get_config_value("TEXT_TOGGLES", "display_inning_text", bool))
-        + optional_text(f"{these_balls}-{these_strikes}, {read_values['outs']} {'Out' if read_values['outs'] == 1 else 'Outs'}\n",    get_config_value("TEXT_TOGGLES", "display_count_text", bool))
-        + optional_text(f"{runners_text}",                                                                                            get_config_value("TEXT_TOGGLES", "display_runners_text", bool))
-        + optional_text(f"Pitcher: {get_name(read_values['pitcher_id'])}\n",                                                          get_config_value("TEXT_TOGGLES", "display_pitcher_text", bool))  
-        + optional_text(f"Batter: {get_name(read_values['batter_id'])}\n",                                                            get_config_value("TEXT_TOGGLES", "display_batter_text", bool))
+          optional_text(f"{'Top of the' if read_values['inning_half'] == 0 else 'Bottom of the'} {ordinal(read_values['inning'])}\n",                                get_config_value("TEXT_TOGGLES", "display_inning_text", bool))
+        + optional_text(f"{get_config_value('TEXT_TOGGLES', 'display_home_name', str)}: {read_values['home_score']}, {get_config_value('TEXT_TOGGLES', 'display_away_name',str)}: {read_values['away_score']}\n",       get_config_value("TEXT_TOGGLES", "display_score_text", bool))
+        + optional_text(f"Stars: {get_config_value('TEXT_TOGGLES', 'display_home_name')}: {read_values['home_stars']}, {get_config_value('TEXT_TOGGLES', 'display_away_name')}: {read_values['away_stars']}\n",get_config_value("TEXT_TOGGLES", "display_star_count_text", bool))
+        + optional_text(f"{these_balls}-{these_strikes}, {read_values['outs']} {'Out' if read_values['outs'] == 1 else 'Outs'}\n",                                   get_config_value("TEXT_TOGGLES", "display_count_text", bool))
+        + optional_text(f"{runners_text}",                                                                                                                           get_config_value("TEXT_TOGGLES", "display_runners_text", bool))
+        + optional_text(f"Pitcher: {get_name(read_values['pitcher_id'])}\n",                                                                                         get_config_value("TEXT_TOGGLES", "display_pitcher_text", bool))  
+        + optional_text(f"Batter: {get_name(read_values['batter_id'])}\n",                                                                                           get_config_value("TEXT_TOGGLES", "display_batter_text", bool))
     )
 
 CALCULATE_ADDRESSES = {
@@ -172,7 +176,13 @@ CALCULATE_ADDRESSES = {
     "balls": (read_word, 0x8089296c),
     "outs": (read_word, 0x80892970),
 
-    "where_are_runners" : (read_half_word, 0x80892734)
+    "where_are_runners" : (read_half_word, 0x80892734),
+
+    "home_score":(read_half_word, 0x808928a4),
+    "away_score":(read_half_word, 0x808928ca),
+
+    "home_stars":(read_byte, 0x80892ad6),
+    "away_stars":(read_byte, 0x80892ad7),
 }
 
 EVERY_FRAME_ADDRESSES = {
@@ -481,13 +491,13 @@ def draw_detailed_text(x, y, width, height):
 def draw_strike_view(x, y, width, height):
     data = last_hit_value["v"]
     my_square = get_inscribed_square_rect(x, y, width, height)
-    my_surface = get_my_surface(my_square.left, my_square.top, my_square.width, my_square.height)
+    my_surface = get_my_surface(x, y, width, height)
 
     my_square.x = 0
     my_square.y = 0
 
-    origin = Vector2(my_square.width/2, -my_square.height/3)
-    scale = 0.2
+    origin = Vector2(width/2, -height/3)
+    scale = get_config_value("VISUAL_TOGGLES", "strike_view_scale", float)
 
     def unNormalize(p):
         return origin + Vector2(my_square.left + scale *  p[0] * my_square.width, my_square.bottom - scale * p[1] * my_square.height)
@@ -522,24 +532,28 @@ def draw_strike_view(x, y, width, height):
     bat_top_corner = unNormalize((data["hitbox_near"], data["strike_y"]+0.35))
     bat_bottom_corner = unNormalize((data["hitbox_far"], data["strike_y"]-0.35))
 
-
     #draw ground
-    pygame.draw.line(my_surface, get_config_color("ground"), ground_start, ground_end, width=LINE_WIDTH)
+    if get_config_value("VISUAL_TOGGLES", "display_ground", bool):
+        pygame.draw.line(my_surface, get_config_color("ground"), ground_start, ground_end, width=LINE_WIDTH)
 
     #draw hitbox
-    pygame.draw.polygon(my_surface, get_config_color("player_hitbox"), [br, (br.x, tl.y), tl, (tl.x, br.y)], width=LINE_WIDTH)
+    if get_config_value("VISUAL_TOGGLES", "display_player_hitbox", bool):
+        pygame.draw.polygon(my_surface, get_config_color("player_hitbox"), [br, (br.x, tl.y), tl, (tl.x, br.y)], width=LINE_WIDTH)
     
-    #draw player_center
-    pygame.draw.polygon(my_surface, get_config_color("player_position"), [unNormalize((model_x, 0.0)), unNormalize((model_x, 2.0))], width=LINE_WIDTH)
+        #draw player_center
+        pygame.draw.polygon(my_surface, get_config_color("player_position"), [unNormalize((model_x, 0.0)), unNormalize((model_x, 2.0))], width=LINE_WIDTH)
 
     #draw strike zone
-    pygame.draw.lines(my_surface, get_config_color("strike_zone"), closed=True, points=strike_points, width=LINE_WIDTH)
+    if get_config_value("VISUAL_TOGGLES", "display_strike_zone", bool):
+        pygame.draw.lines(my_surface, get_config_color("strike_zone"), closed=True, points=strike_points, width=LINE_WIDTH)
 
     #draw bat
-    pygame.draw.polygon(my_surface, get_config_color("bat_hitbox"), [bat_top_corner, (bat_top_corner.x, bat_bottom_corner.y), bat_bottom_corner, (bat_bottom_corner.x, bat_top_corner.y)], width=LINE_WIDTH)
+    if get_config_value("VISUAL_TOGGLES", "display_bat_hitbox", bool):
+        pygame.draw.polygon(my_surface, get_config_color("bat_hitbox"), [bat_top_corner, (bat_top_corner.x, bat_bottom_corner.y), bat_bottom_corner, (bat_bottom_corner.x, bat_top_corner.y)], width=LINE_WIDTH)
 
     #draw ball
-    pygame.draw.circle(my_surface, get_config_color("ball"), ball_location, radius=5, width=LINE_WIDTH)
+    if get_config_value("VISUAL_TOGGLES", "display_ball_hitbox", bool):
+        pygame.draw.circle(my_surface, get_config_color("ball"), ball_location, radius=5, width=LINE_WIDTH)
 
 
 
@@ -694,6 +708,17 @@ ADDITIONAL_TRAJ_LINE_OUTLINE = get_config_value("GRAPHICS", "additional_trajecto
 force_hit = False
 previous_batting = -1
 
+SCREEN_REGIONS = {
+    "TOP" : (0,0,width, height / 3),
+    "MID" : (0,height / 3,width, height / 3),
+    "MIDDLE" : (0,height / 3,width, height / 3),
+    "BOTTOM" : (0,height * 2/ 3,width, height / 3),
+}
+
+def get_screen_region(region_name:str):
+    return SCREEN_REGIONS.get(region_name.upper(), (0,0,0,0))
+
+
 def main():
     global size, width, height, last_hit_value, last_read_values, read_values, last_hits, config, screen, force_hit, previous_batting
 
@@ -842,9 +867,9 @@ def main():
             dme.hook()
 
             # let user know it's unhooked
-            draw_unhooked_screen(0,            0,width, height/3)
-            draw_unhooked_screen(0, height * 1/3,width, height/3)
-            draw_unhooked_screen(0, height * 2/3,width, height/3)
+            draw_unhooked_screen(*get_screen_region("top"))
+            draw_unhooked_screen(*get_screen_region("mid"))
+            draw_unhooked_screen(*get_screen_region("bottom"))
             pygame.display.flip()
             continue
 
@@ -883,17 +908,15 @@ def main():
 
 
         if last_hit_value["k"] == "Hit":
-            draw_vertical_trajectory(0, 0, width, height/3)
+            draw_vertical_trajectory(*get_screen_region(get_config_value("VISUAL_TOGGLES", "vertical_path_screen")))
 
-            draw_horizontal_trajectory(0, height * 1/3, width, height * 1/3)
+            draw_horizontal_trajectory(*get_screen_region(get_config_value("VISUAL_TOGGLES", "horizontal_path_screen")))
 
-            draw_detailed_text(0, height * 2/3, width, height * 1/3)
-
-            # draw_horizontal_trajectory(width/2, height/2, width/2, height/2)
+            draw_detailed_text(*get_screen_region(get_config_value("VISUAL_TOGGLES", "text_screen")))
 
         elif last_hit_value["k"] == "StrikeBall" or last_hit_value["k"] == "HBP":
-            draw_strike_view(0, 0, width, height/3)
-            draw_detailed_text(0, height * 2/3, width, height * 1/3)
+            draw_strike_view(*get_screen_region(get_config_value("VISUAL_TOGGLES", "plate_screen")))
+            draw_detailed_text(*get_screen_region(get_config_value("VISUAL_TOGGLES", "text_screen")))
 
         pygame.display.flip()
 
