@@ -319,7 +319,7 @@ def calculate_trajectory():
     elif read_values["pitch_1"] == 2 and read_values["pitch_2"] == 0:
         pitch_type = 3
 
-    is_starred = False
+    is_starred = get_config_value("USAGE", "is_starred", bool)
 
     read_values["pitch_type"] = pitch_type
 
@@ -726,6 +726,7 @@ def main():
 
     pygame.init()
     screen = pygame.display.set_mode(size)
+    
     displayable_data = False
 
     def increase_bat_watch():
